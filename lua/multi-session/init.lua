@@ -1,116 +1,36 @@
 local M = {}
+local pickers = require("multi-session.pickers")
 
 local session_dir = vim.fn.stdpath("state") .. "/multi-session"
-
 local uv = vim.uv or vim.loop
 
-M.config = {}
-
----@param type string
----@param project? string
-M.snacks_picker = function(type, project)
-	local snacks = require("snacks")
-	local items = {}
-
-	local options = {}
-	if type == "projects" then
-		options = M.project_list()
-	elseif type == "sessions" then
-		options = M.session_list(project)
-	else
-		return vim.notify("Invalid type in snacks picker", vim.log.levels.ERROR)
-	end
-
-	for i, v in ipairs(options) do
-		table.insert(items, { text = v })
-	end
-
-	snacks.picker({
-		items = items,
-		format = function(item)
-			return { { item.text, "SnacksPickerBold" } }
-		end,
-		confirm = function(picker, item)
-			picker:close()
-			if type == "projects" then
-				M.snacks_picker("sessions", item.text)
-			else
-				-- print(project, item.text)
-				M.load(project, item.text)
-			end
-		end,
-	})
-end
-
----@return string[]
-M.project_list = function()
-	local dirs = {}
-	local fd = uv.fs_scandir(session_dir)
-	if not fd then
-		return dirs
-	end
-	while true do
-		local name, type = uv.fs_scandir_next(fd)
-		if not name then
-			break
-		end
-
-		if type == "directory" then
-			table.insert(dirs, name)
-		end
-	end
-	return dirs
-end
-
----@param project string
----@return string[]
-M.session_list = function(project)
-	local files = {}
-	local fd = uv.fs_scandir(session_dir .. "/" .. project)
-	if not fd then
-		return files
-	end
-	while true do
-		local name, type = uv.fs_scandir_next(fd)
-		if not name then
-			break
-		end
-		if type == "file" then
-			table.insert(files, name)
-		end
-	end
-	return files
-end
-
----@param project string
----@return string
-M.pick_session = function(project)
-	local co = coroutine.running()
-	vim.ui.select(M.session_list(project), { prompt = "Select session" }, function(choice)
-		coroutine.resume(co, choice)
-	end)
-	return coroutine.yield()
-end
-
----@return string
-M.pick_project = function()
-	local co = coroutine.running()
-	vim.ui.select(M.project_list(), { prompt = "Select project" }, function(choice)
-		coroutine.resume(co, choice)
-	end)
-	return coroutine.yield()
-end
+M.config = {
+	preserve = {
+		cwd = true,
+		buffers = true,
+		tabpages = true,
+		layout = true,
+	},
+	picker = {
+		default = "snacks", -- default|snacks
+		snacks = {
+			-- can be any snacks preset layout or custom layout table
+			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-config
+			layout = "telescope",
+			project_icon = "",
+			session_icon = "󰑏",
+			project_hl = "Directory",
+			session_hl = "SnacksPickerBold",
+		},
+	},
+}
 
 M.select = function()
-	coroutine.wrap(function()
-		if M.config.picker == "snacks" then
-			M.snacks_picker("projects")
-		else
-			local project = M.pick_project()
-			local session = M.pick_session(project)
-			M.load(project, session)
-		end
-	end)()
+	if M.config.picker.default == "snacks" then
+		pickers.snacks("projects", nil, M.config.picker.snacks)
+	else
+		pickers.default("projects")
+	end
 end
 
 ---@param project string

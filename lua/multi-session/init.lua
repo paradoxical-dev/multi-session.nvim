@@ -1,12 +1,12 @@
 local M = {}
 local pickers = require("multi-session.pickers")
 
-session_dir = vim.fn.stdpath("state") .. "/multi-session"
+local session_dir = vim.fn.stdpath("state") .. "/multi-session"
 local uv = vim.uv or vim.loop
 
 M.config = {
 	notify = true, -- show notifications after performing actions
-	preserve = {
+	preserve = { -- which aspects of the user session to preserve
 		cwd = true,
 		buffers = true,
 		tabpages = true,
@@ -20,12 +20,15 @@ M.config = {
 		},
 		snacks = {
 			-- can be any snacks preset layout or custom layout table
-			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-config
-			layout = "telescope",
+			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-layouts
+			layout = "vertical",
 			project_icon = "",
 			session_icon = "󰑏",
-			project_hl = "Directory",
-			session_hl = "SnacksPickerBold",
+			hl = {
+				base_dir = "SnacksPickerDir",
+				project_dir = "Directory",
+				session = "SnacksPickerBold",
+			},
 		},
 	},
 }
@@ -63,12 +66,6 @@ M.save = function()
 	if M.config.notify then
 		vim.notify("Saved session as: " .. "session", vim.log.levels.INFO)
 	end
-end
-
-M.sanitize_path = function()
-	local cwd = uv.cwd()
-	local ret = cwd:gsub("/", "%")
-	print(ret)
 end
 
 M.delete = function()

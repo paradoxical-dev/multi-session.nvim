@@ -1,6 +1,8 @@
 local M = {}
 local utils = require("multi-session.utils")
 
+local uv = vim.uv or vim.loop
+
 -- Default picker using vim.ui.select
 ---@param type string
 ---@param project? string
@@ -20,7 +22,8 @@ M.default = function(type, project, opts)
 		vim.ui.select(utils.session_list(project), {
 			prompt = "Select session",
 			format_item = function(item)
-				return opts.session_icon .. " " .. item
+				local name = item:gsub("%.vim", "")
+				return opts.session_icon .. " " .. name
 			end,
 		}, function(choice)
 			require("multi-session").load(project, choice)
@@ -62,13 +65,14 @@ M.snacks = function(type, project, opts)
 			if type == "projects" then
 				local path = item.text:gsub("%%", "/")
 				local base = vim.fn.fnamemodify(path, ":t")
-				local dir = path:gsub(base, "")
+				local dir = vim.fn.fnamemodify(path, ":h"):gsub(uv.os_getenv("HOME"), "~")
 				return {
-					{ opts.project_icon .. " " .. dir, opts.project_hl },
-					{ base, opts.project_hl },
+					{ opts.project_icon .. " " .. dir .. "/", opts.hl.base_dir },
+					{ base, opts.hl.project_dir },
 				}
 			else
-				return { { opts.session_icon .. " " .. item.text, opts.session_hl } }
+				local name = item.text:gsub("%.vim", "")
+				return { { opts.session_icon .. " " .. name, opts.hl.session } }
 			end
 		end,
 		layout = opts.layout,

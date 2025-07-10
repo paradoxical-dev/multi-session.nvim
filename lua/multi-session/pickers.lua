@@ -60,7 +60,7 @@ M.snacks = function(type, project, opts)
 		if type == "projects" then
 			path = v:gsub("%%", "/")
 		else
-			path = utils.session_dir .. "/" .. project .. "/" .. v
+			path = utils.session_dir .. "/" .. project .. "/" .. v .. "/" .. v .. ".vim"
 		end
 		table.insert(items, { text = v, file = path })
 	end

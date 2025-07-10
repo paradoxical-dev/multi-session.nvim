@@ -25,8 +25,8 @@ M.vim = function(type, project, opts)
 		vim.ui.select(utils.session_list(project), {
 			prompt = "Select session",
 			format_item = function(item)
-				local name = item:gsub("%.vim", "")
-				return opts.session_icon .. " " .. name
+				-- local name = item:gsub("%.vim", "")
+				return opts.session_icon .. " " .. item
 			end,
 		}, function(choice)
 			if not choice or choice == "" then

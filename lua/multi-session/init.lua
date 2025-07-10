@@ -6,12 +6,14 @@ local uv = vim.uv or vim.loop
 
 M.config = {
 	notify = true, -- show notifications after performing actions
-	preserve = { -- which aspects of the user session to preserve
-		cwd = true,
-		buffers = true,
-		tabpages = true,
-		layout = true,
+	preserve = { -- extra aspects of the user session to preserve
+		-- TODO: add support for restoring breakpoints, watches, qflist, undo hist
+		breakpoints = false, -- requires dap-utils.nvim
+		qflist = false, -- requires quickfix.nvim
+		undo = false,
+		watches = false, -- requires dap-utils.nvim
 	},
+	branch_scope = true, -- TODO: implement branch scoped sessions
 	picker = {
 		default = "vim", -- vim|snacks
 		vim = {
@@ -57,6 +59,7 @@ M.load = function(opts, project, session)
 		local s = state.load()
 		if s then
 			local path = vim.fs.joinpath(session_dir, s.project, s.session)
+			path = path .. "/" .. s.session .. ".vim"
 			vim.cmd("source " .. vim.fn.fnameescape(path))
 			M.active_session = true
 
@@ -72,7 +75,7 @@ M.load = function(opts, project, session)
 	end
 
 	local path = vim.fs.joinpath(session_dir, project, session)
-	vim.cmd("source " .. vim.fn.fnameescape(path))
+	vim.cmd("source " .. vim.fn.fnameescape(path .. "/" .. session .. ".vim"))
 	M.active_session = true
 
 	state.save(project, session)
@@ -93,6 +96,7 @@ M.save = function()
 			end
 
 			local session_path = session_dir .. "/" .. s.project .. "/" .. s.session
+			session_path = session_path .. "/" .. s.session .. ".vim"
 			session_path = vim.fn.fnameescape(session_path)
 			vim.cmd("mksession! " .. session_path)
 
@@ -118,7 +122,10 @@ M.save = function()
 			return
 		end
 
-		local full_path = vim.fn.fnameescape(project_dir .. "/" .. name)
+		local session_path = project_dir .. "/" .. name
+		vim.fn.mkdir(session_path, "p")
+		local full_path = vim.fn.fnameescape(session_path .. "/" .. name .. ".vim")
+
 		vim.cmd("mksession! " .. full_path)
 		state.save(sanitized_dir, name)
 

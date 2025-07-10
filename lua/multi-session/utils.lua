@@ -6,21 +6,21 @@ M.session_dir = vim.fn.stdpath("state") .. "/multi-session"
 ---@param project string
 ---@return string[]
 M.session_list = function(project)
-	local files = {}
+	local sessions = {}
 	local fd = uv.fs_scandir(M.session_dir .. "/" .. project)
 	if not fd then
-		return files
+		return sessions
 	end
 	while true do
 		local name, type = uv.fs_scandir_next(fd)
 		if not name then
 			break
 		end
-		if type == "file" then
-			table.insert(files, name)
+		if type == "directory" then
+			table.insert(sessions, name)
 		end
 	end
-	return files
+	return sessions
 end
 
 ---@return string[]

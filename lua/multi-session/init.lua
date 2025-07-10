@@ -1,7 +1,7 @@
 local M = {}
 local pickers = require("multi-session.pickers")
-
-local session_dir = vim.fn.stdpath("state") .. "/multi-session"
+local state = require("multi-session.state")
+local session_dir = require("multi-session.utils").session_dir
 local uv = vim.uv or vim.loop
 
 M.config = {
@@ -44,6 +44,9 @@ end
 ---@param project string
 ---@param session string
 M.load = function(project, session)
+	if not project and session or session == "" then
+		return
+	end
 	local path = vim.fs.joinpath(session_dir, project, session)
 	vim.cmd("source " .. vim.fn.fnameescape(path))
 	if M.config.notify then

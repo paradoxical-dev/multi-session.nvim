@@ -16,6 +16,9 @@ M.default = function(type, project, opts)
 				return opts.project_icon .. " " .. path
 			end,
 		}, function(choice)
+			if not choice or choice == "" then
+				return
+			end
 			M.default("sessions", choice, opts)
 		end)
 	elseif type == "sessions" then
@@ -26,6 +29,9 @@ M.default = function(type, project, opts)
 				return opts.session_icon .. " " .. name
 			end,
 		}, function(choice)
+			if not choice or choice == "" then
+				return
+			end
 			require("multi-session").load(project, choice)
 		end)
 	else

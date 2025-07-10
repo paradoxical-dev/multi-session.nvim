@@ -32,7 +32,7 @@ M.default = function(type, project, opts)
 			if not choice or choice == "" then
 				return
 			end
-			require("multi-session").load(project, choice)
+			require("multi-session").load(nil, project, choice)
 		end)
 	else
 		return vim.notify("Invalid type in default picker", vim.log.levels.ERROR)
@@ -89,7 +89,7 @@ M.snacks = function(type, project, opts)
 				opts.preview = "file"
 				M.snacks("sessions", item.text, opts)
 			else
-				require("multi-session").load(project, item.text)
+				require("multi-session").load(nil, project, item.text)
 			end
 		end,
 	})

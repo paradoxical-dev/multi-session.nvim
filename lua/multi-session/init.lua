@@ -41,14 +41,32 @@ M.select = function()
 	end
 end
 
+---@param opts table
 ---@param project string
 ---@param session string
-M.load = function(project, session)
-	if not project and session or session == "" then
+M.load = function(opts, project, session)
+	if opts and opts.latest == true then
+		local s = state.load()
+		if s then
+			local path = vim.fs.joinpath(session_dir, s.project, s.session)
+			vim.cmd("source " .. vim.fn.fnameescape(path))
+
+			if M.config.notify then
+				vim.notify("Loaded latest session: " .. s.session, vim.log.levels.INFO)
+			end
+		end
 		return
 	end
+
+	if not (project and session) or session == "" then
+		return
+	end
+
 	local path = vim.fs.joinpath(session_dir, project, session)
 	vim.cmd("source " .. vim.fn.fnameescape(path))
+
+	state.save(project, session)
+
 	if M.config.notify then
 		vim.notify("Loaded session: " .. session, vim.log.levels.INFO)
 	end
@@ -76,9 +94,10 @@ M.delete = function()
 end
 
 function M.setup(opts)
-	if not vim.loop.fs_stat(session_dir) then
+	if uv.fs_stat(session_dir) then
 		vim.fn.mkdir(session_dir, "p")
 	end
+	state.file_check()
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 end
 

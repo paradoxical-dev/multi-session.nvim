@@ -33,6 +33,8 @@ M.config = {
 	},
 }
 
+M.active_session = false
+
 ---@param opts? table
 M.select = function(opts)
 	local default_picker = M.config.picker.default
@@ -56,6 +58,7 @@ M.load = function(opts, project, session)
 		if s then
 			local path = vim.fs.joinpath(session_dir, s.project, s.session)
 			vim.cmd("source " .. vim.fn.fnameescape(path))
+			M.active_session = true
 
 			if M.config.notify then
 				vim.notify("Loaded latest session: " .. s.session, vim.log.levels.INFO)
@@ -70,6 +73,7 @@ M.load = function(opts, project, session)
 
 	local path = vim.fs.joinpath(session_dir, project, session)
 	vim.cmd("source " .. vim.fn.fnameescape(path))
+	M.active_session = true
 
 	state.save(project, session)
 
@@ -79,6 +83,27 @@ M.load = function(opts, project, session)
 end
 
 M.save = function()
+	if M.active_session then
+		local overwrite = vim.fn.confirm("Overwrite your current session?", "&Yes\n&No", 2)
+		if overwrite == 1 then
+			local s = state.load()
+			if not s then
+				vim.notify("Unable to load session details", vim.log.levels.ERROR)
+				return
+			end
+
+			local session_path = session_dir .. "/" .. s.project .. "/" .. s.session
+			session_path = vim.fn.fnameescape(session_path)
+			vim.cmd("mksession! " .. session_path)
+
+			if M.config.notify then
+				vim.notify("Saved session as: " .. s.session, vim.log.levels.INFO)
+			end
+
+			return
+		end
+	end
+
 	local sanitized_dir = vim.fn.getcwd():gsub("[\\/:]+", "%%")
 	local project_dir = session_dir .. "/" .. sanitized_dir
 	local exists = uv.fs_stat(project_dir)
@@ -87,12 +112,20 @@ M.save = function()
 		vim.fn.mkdir(project_dir, "p")
 	end
 
-	local full_path = vim.fn.fnameescape(project_dir .. "/session.vim")
-	vim.cmd("mksession! " .. full_path)
+	vim.ui.input({ prompt = "Session name:" }, function(name)
+		if not name or name == "" then
+			vim.notify("Session save cancelled", vim.log.levels.WARN)
+			return
+		end
 
-	if M.config.notify then
-		vim.notify("Saved session as: " .. "session", vim.log.levels.INFO)
-	end
+		local full_path = vim.fn.fnameescape(project_dir .. "/" .. name)
+		vim.cmd("mksession! " .. full_path)
+		state.save(sanitized_dir, name)
+
+		if M.config.notify then
+			vim.notify("Saved session as: " .. name, vim.log.levels.INFO)
+		end
+	end)
 end
 
 M.delete = function()

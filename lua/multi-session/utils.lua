@@ -1,13 +1,13 @@
 local M = {}
 
 local uv = vim.uv or vim.loop
-local session_dir = vim.fn.stdpath("state") .. "/multi-session"
+M.session_dir = vim.fn.stdpath("state") .. "/multi-session"
 
 ---@param project string
 ---@return string[]
 M.session_list = function(project)
 	local files = {}
-	local fd = uv.fs_scandir(session_dir .. "/" .. project)
+	local fd = uv.fs_scandir(M.session_dir .. "/" .. project)
 	if not fd then
 		return files
 	end
@@ -26,7 +26,7 @@ end
 ---@return string[]
 M.project_list = function()
 	local dirs = {}
-	local fd = uv.fs_scandir(session_dir)
+	local fd = uv.fs_scandir(M.session_dir)
 	if not fd then
 		return dirs
 	end

@@ -1,7 +1,7 @@
 local M = {}
 local pickers = require("multi-session.pickers")
 
-local session_dir = vim.fn.stdpath("state") .. "/multi-session"
+session_dir = vim.fn.stdpath("state") .. "/multi-session"
 local uv = vim.uv or vim.loop
 
 M.config = {
@@ -13,7 +13,11 @@ M.config = {
 		layout = true,
 	},
 	picker = {
-		default = "snacks", -- default|snacks
+		default = "vim", -- vim|snacks
+		vim = {
+			project_icon = "",
+			session_icon = "󰑏",
+		},
 		snacks = {
 			-- can be any snacks preset layout or custom layout table
 			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-config
@@ -30,7 +34,7 @@ M.select = function()
 	if M.config.picker.default == "snacks" then
 		pickers.snacks("projects", nil, M.config.picker.snacks)
 	else
-		pickers.default("projects")
+		pickers.default("projects", nil, M.config.picker.vim)
 	end
 end
 

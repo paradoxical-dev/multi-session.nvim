@@ -91,4 +91,61 @@ M.load_session = function(session_path, extras)
 	end
 end
 
+---@param dir string
+M.is_repo = function(dir)
+	local handle = io.popen("git -C " .. vim.fn.shellescape(dir) .. " rev-parse --is-inside-work-tree 2>/dev/null")
+	if handle then
+		local result = handle:read("*a")
+		handle:close()
+		return result:match("true") ~= nil
+	end
+	return false
+end
+
+---@param dir string
+M.current_branch = function(dir)
+	local handle = io.popen("git -C " .. vim.fn.shellescape(dir) .. " rev-parse --abbrev-ref HEAD 2>/dev/null")
+	if handle then
+		local result = handle:read("*l") -- read one line
+		handle:close()
+		return result
+	end
+	return nil
+end
+
+M.branch_list = function(project)
+	local branches = {}
+	local fd = uv.fs_scandir(M.session_dir .. "/" .. project)
+	if not fd then
+		return branches
+	end
+	while true do
+		local name, type = uv.fs_scandir_next(fd)
+		if not name then
+			break
+		end
+		if type == "directory" then
+			table.insert(branches, name)
+		end
+	end
+	return branches
+end
+
+M.get_head = function(dir, branch)
+	local cmd = "git -C " .. vim.fn.shellescape(dir) .. " rev-parse " .. vim.fn.shellescape(branch)
+	local handle = io.popen(cmd)
+	if not handle then
+		return nil
+	end
+
+	local result = handle:read("*l")
+	handle:close()
+
+	-- print(result)
+	if result and result:match("^%x+$") then
+		return result
+	end
+	return nil
+end
+
 return M

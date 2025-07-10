@@ -5,17 +5,19 @@ local utils = require("multi-session.utils")
 local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
+-- TODO: Add rename/remove session
+
 M.config = {
 	notify = true, -- show notifications after performing actions
 	preserve = { -- extra aspects of the user session to preserve
-		breakpoints = true, -- requires dap-utils.nvim
-		qflist = true, -- requires quickfix.nvim
-		undo = true,
-		watches = true, -- requires dap-utils.nvim
+		breakpoints = false, -- requires dap-utils.nvim
+		qflist = false, -- requires quickfix.nvim
+		undo = false,
+		watches = false, -- requires dap-utils.nvim
 	},
 	branch_scope = true, -- TODO: implement branch scoped sessions
 	picker = {
-		default = "vim", -- vim|snacks
+		default = "snacks", -- vim|snacks
 		vim = {
 			project_icon = "",
 			session_icon = "󰑏",
@@ -48,17 +50,27 @@ M.select = function(opts)
 		return
 	end
 
-	pickers[default_picker]("projects", nil, picker_options)
+	if M.config.branch_scope and utils.is_repo(vim.fn.getcwd()) then
+		pickers[default_picker]("projects", nil, picker_options, { repo = true })
+	else
+		pickers[default_picker]("projects", nil, picker_options)
+	end
 end
 
 ---@param opts table
 ---@param project string
 ---@param session string
-M.load = function(opts, project, session)
+---@param branch? string
+M.load = function(opts, project, session, branch)
 	if opts and opts.latest == true then
 		local s = state.load()
 		if s then
-			local path = vim.fs.joinpath(session_dir, s.project, s.session)
+			local path
+			if s.branch and M.config.branch_scope then
+				path = vim.fs.joinpath(session_dir, s.project, s.branch, s.session)
+			else
+				path = vim.fs.joinpath(session_dir, s.project, s.session)
+			end
 			utils.load_session(path, M.config.preserve)
 			M.active_session = true
 
@@ -73,7 +85,12 @@ M.load = function(opts, project, session)
 		return
 	end
 
-	local path = vim.fs.joinpath(session_dir, project, session)
+	local path
+	if branch and M.config.branch_scope then
+		path = vim.fs.joinpath(session_dir, project, branch, session)
+	else
+		path = vim.fs.joinpath(session_dir, project, session)
+	end
 	utils.load_session(path, M.config.preserve)
 	M.active_session = true
 
@@ -105,9 +122,11 @@ M.save = function()
 		end
 	end
 
+	local cwd = vim.fn.getcwd()
 	local sanitized_dir = vim.fn.getcwd():gsub("[\\/:]+", "%%")
 	local project_dir = session_dir .. "/" .. sanitized_dir
 	local exists = uv.fs_stat(project_dir)
+	local branch
 
 	if not exists then
 		vim.fn.mkdir(project_dir, "p")
@@ -119,11 +138,22 @@ M.save = function()
 			return
 		end
 
-		local session_path = project_dir .. "/" .. name
+		local session_path = ""
+		if utils.is_repo(cwd) and M.config.branch_scope then
+			branch = utils.current_branch(cwd)
+			session_path = project_dir .. "/" .. branch .. "/" .. name
+		else
+			session_path = project_dir .. "/" .. name
+		end
 		vim.fn.mkdir(session_path, "p")
 
 		utils.save_session(session_path, M.config.preserve)
-		state.save(sanitized_dir, name)
+
+		if M.config.branch_scope and branch then
+			state.save(sanitized_dir, name, branch)
+		else
+			state.save(sanitized_dir, name)
+		end
 
 		if M.config.notify then
 			vim.notify("Saved session as: " .. name, vim.log.levels.INFO)

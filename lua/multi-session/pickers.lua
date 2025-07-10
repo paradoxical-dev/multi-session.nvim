@@ -3,11 +3,11 @@ local utils = require("multi-session.utils")
 
 local uv = vim.uv or vim.loop
 
--- Default picker using vim.ui.select
 ---@param type string
----@param project? string
+---@param project string
 ---@param opts table
-M.vim = function(type, project, opts)
+---@param git? table
+M.vim = function(type, project, opts, git)
 	if type == "projects" then
 		vim.ui.select(utils.project_list(), {
 			prompt = "Select project",
@@ -19,20 +19,49 @@ M.vim = function(type, project, opts)
 			if not choice or choice == "" then
 				return
 			end
-			M.vim("sessions", choice, opts)
+			if git and git.repo then
+				M.vim("branches", choice, opts, git)
+			else
+				M.vim("sessions", choice, opts)
+			end
 		end)
-	elseif type == "sessions" then
-		vim.ui.select(utils.session_list(project), {
-			prompt = "Select session",
+	elseif type == "branches" then
+		vim.ui.select(utils.branch_list(project), {
+			prompt = "Select branch",
 			format_item = function(item)
-				-- local name = item:gsub("%.vim", "")
 				return opts.session_icon .. " " .. item
 			end,
 		}, function(choice)
 			if not choice or choice == "" then
 				return
 			end
-			require("multi-session").load(nil, project, choice)
+			git.branch = choice
+			project = project .. "/" .. choice
+			M.vim("sessions", project, opts, git)
+		end)
+	elseif type == "sessions" then
+		vim.ui.select(utils.session_list(project), {
+			prompt = "Select session",
+			format_item = function(item)
+				return opts.session_icon .. " " .. item
+			end,
+		}, function(choice)
+			if not choice or choice == "" then
+				return
+			end
+			if not git then
+				require("multi-session").load(nil, project, choice)
+			else
+				-- branch needs to be removed from the project name
+				-- it was added in the branch picker and will be added back on
+				-- from inside the `utils.load_session` function
+				local s = "/" .. git.branch
+				if project:sub(-#s) == s then
+					project = project:sub(1, -#s - 1)
+				end
+				print(project)
+				require("multi-session").load(nil, project, choice, git.branch)
+			end
 		end)
 	else
 		return vim.notify("Invalid type in default picker", vim.log.levels.ERROR)
@@ -40,9 +69,10 @@ M.vim = function(type, project, opts)
 end
 
 ---@param type string
----@param project? string
+---@param project string
 ---@param opts table
-M.snacks = function(type, project, opts)
+---@param git? table
+M.snacks = function(type, project, opts, git)
 	local snacks = require("snacks")
 	local items = {}
 
@@ -51,18 +81,27 @@ M.snacks = function(type, project, opts)
 		options = utils.project_list()
 	elseif type == "sessions" then
 		options = utils.session_list(project)
+	elseif type == "branches" then
+		options = utils.branch_list(project)
 	else
 		return vim.notify("Invalid type in snacks picker", vim.log.levels.ERROR)
 	end
 
 	for _, v in ipairs(options) do
 		local path = ""
+		local commit
 		if type == "projects" then
 			path = v:gsub("%%", "/")
-		else
+		elseif type == "sessions" then
 			path = utils.session_dir .. "/" .. project .. "/" .. v .. "/" .. v .. ".vim"
+		else
+			local repo_path = project:gsub("%%", "/")
+			commit = utils.get_head(repo_path, v)
+			-- if commit then
+			-- 	commit = commit:sub(1, 7)
+			-- end
 		end
-		table.insert(items, { text = v, file = path })
+		table.insert(items, { text = v, file = path, commit = commit })
 	end
 
 	snacks.picker({
@@ -86,10 +125,32 @@ M.snacks = function(type, project, opts)
 		confirm = function(picker, item)
 			picker:close()
 			if type == "projects" then
+				if git and git.repo then
+					opts.preview = "git_log"
+					M.snacks("branches", item.text, opts, git)
+				else
+					opts.preview = "file"
+					M.snacks("sessions", item.text, opts)
+				end
+			elseif type == "branches" then
+				git.branch = item.text
+				project = project .. "/" .. item.text
 				opts.preview = "file"
-				M.snacks("sessions", item.text, opts)
+				M.snacks("sessions", project, opts, git)
 			else
-				require("multi-session").load(nil, project, item.text)
+				if not git then
+					require("multi-session").load(nil, project, item.text)
+					return
+				end
+				-- branch needs to be removed from the project name
+				-- it was added in the branch picker and will be added back on
+				-- from inside the `utils.load_session` function
+				local s = "/" .. git.branch
+				if project:sub(-#s) == s then
+					project = project:sub(1, -#s - 1)
+				end
+				print(project)
+				require("multi-session").load(nil, project, item.text, git.branch)
 			end
 		end,
 	})

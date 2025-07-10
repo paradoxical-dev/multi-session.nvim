@@ -17,10 +17,18 @@ end
 
 ---@param project string
 ---@param session string
-M.save = function(project, session)
+---@param branch? string
+M.save = function(project, session, branch)
 	local f = io.open(state_file, "w")
 	if f then
-		local data = vim.fn.json_encode({ project = project, session = session })
+		local meta = {
+			project = project,
+			session = session,
+		}
+		if branch then
+			meta.branch = branch
+		end
+		local data = vim.fn.json_encode(meta)
 		f:write(data)
 		f:close()
 	end

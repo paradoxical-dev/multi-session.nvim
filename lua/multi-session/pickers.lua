@@ -7,7 +7,7 @@ local uv = vim.uv or vim.loop
 ---@param type string
 ---@param project? string
 ---@param opts table
-M.default = function(type, project, opts)
+M.vim = function(type, project, opts)
 	if type == "projects" then
 		vim.ui.select(utils.project_list(), {
 			prompt = "Select project",
@@ -19,7 +19,7 @@ M.default = function(type, project, opts)
 			if not choice or choice == "" then
 				return
 			end
-			M.default("sessions", choice, opts)
+			M.vim("sessions", choice, opts)
 		end)
 	elseif type == "sessions" then
 		vim.ui.select(utils.session_list(project), {

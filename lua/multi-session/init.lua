@@ -33,12 +33,18 @@ M.config = {
 	},
 }
 
-M.select = function()
-	if M.config.picker.default == "snacks" then
-		pickers.snacks("projects", nil, M.config.picker.snacks)
-	else
-		pickers.default("projects", nil, M.config.picker.vim)
+---@param opts? table
+M.select = function(opts)
+	local default_picker = M.config.picker.default
+	local picker_options = M.config.picker[default_picker]
+
+	if opts and opts.cwd == true then
+		local project = vim.fn.getcwd():gsub("[\\/:]+", "%%")
+		pickers[default_picker]("sessions", project, picker_options)
+		return
 	end
+
+	pickers[default_picker]("projects", nil, picker_options)
 end
 
 ---@param opts table

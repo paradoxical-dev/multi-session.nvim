@@ -1,17 +1,17 @@
 local M = {}
 local pickers = require("multi-session.pickers")
 local state = require("multi-session.state")
-local session_dir = require("multi-session.utils").session_dir
+local utils = require("multi-session.utils")
+local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
 M.config = {
 	notify = true, -- show notifications after performing actions
 	preserve = { -- extra aspects of the user session to preserve
-		-- TODO: add support for restoring breakpoints, watches, qflist, undo hist
-		breakpoints = false, -- requires dap-utils.nvim
-		qflist = false, -- requires quickfix.nvim
-		undo = false,
-		watches = false, -- requires dap-utils.nvim
+		breakpoints = true, -- requires dap-utils.nvim
+		qflist = true, -- requires quickfix.nvim
+		undo = true,
+		watches = true, -- requires dap-utils.nvim
 	},
 	branch_scope = true, -- TODO: implement branch scoped sessions
 	picker = {
@@ -59,8 +59,7 @@ M.load = function(opts, project, session)
 		local s = state.load()
 		if s then
 			local path = vim.fs.joinpath(session_dir, s.project, s.session)
-			path = path .. "/" .. s.session .. ".vim"
-			vim.cmd("source " .. vim.fn.fnameescape(path))
+			utils.load_session(path, M.config.preserve)
 			M.active_session = true
 
 			if M.config.notify then
@@ -75,7 +74,7 @@ M.load = function(opts, project, session)
 	end
 
 	local path = vim.fs.joinpath(session_dir, project, session)
-	vim.cmd("source " .. vim.fn.fnameescape(path .. "/" .. session .. ".vim"))
+	utils.load_session(path, M.config.preserve)
 	M.active_session = true
 
 	state.save(project, session)
@@ -96,9 +95,7 @@ M.save = function()
 			end
 
 			local session_path = session_dir .. "/" .. s.project .. "/" .. s.session
-			session_path = session_path .. "/" .. s.session .. ".vim"
-			session_path = vim.fn.fnameescape(session_path)
-			vim.cmd("mksession! " .. session_path)
+			utils.save_session(session_path, M.config.preserve)
 
 			if M.config.notify then
 				vim.notify("Saved session as: " .. s.session, vim.log.levels.INFO)
@@ -124,9 +121,8 @@ M.save = function()
 
 		local session_path = project_dir .. "/" .. name
 		vim.fn.mkdir(session_path, "p")
-		local full_path = vim.fn.fnameescape(session_path .. "/" .. name .. ".vim")
 
-		vim.cmd("mksession! " .. full_path)
+		utils.save_session(session_path, M.config.preserve)
 		state.save(sanitized_dir, name)
 
 		if M.config.notify then

@@ -5,6 +5,7 @@ local session_dir = vim.fn.stdpath("state") .. "/multi-session"
 local uv = vim.uv or vim.loop
 
 M.config = {
+	notify = true, -- show notifications after performing actions
 	preserve = {
 		cwd = true,
 		buffers = true,
@@ -41,14 +42,26 @@ M.load = function(project, session)
 end
 
 M.save = function()
-	local cwd = uv.cwd()
-	local current_dir = vim.fn.fnamemodify(cwd, ":t")
-	local project = session_dir .. "/" .. current_dir
-	print(project)
-	if not uv.fs_stat(project) then
-		vim.fn.mkdir(project, "p")
+	local sanitized_dir = vim.fn.getcwd():gsub("[\\/:]+", "%%")
+	local project_dir = session_dir .. "/" .. sanitized_dir
+	local exists = uv.fs_stat(project_dir)
+
+	if not exists then
+		vim.fn.mkdir(project_dir, "p")
 	end
-	vim.cmd("mksession! " .. project .. "/session.vim")
+
+	local full_path = vim.fn.fnameescape(project_dir .. "/session.vim")
+	vim.cmd("mksession! " .. full_path)
+
+	if M.config.notify then
+		vim.notify("Saved session as: " .. "session", vim.log.levels.INFO)
+	end
+end
+
+M.sanitize_path = function()
+	local cwd = uv.cwd()
+	local ret = cwd:gsub("/", "%")
+	print(ret)
 end
 
 M.delete = function()
@@ -59,6 +72,7 @@ function M.setup(opts)
 	if not vim.loop.fs_stat(session_dir) then
 		vim.fn.mkdir(session_dir, "p")
 	end
+	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 end
 
 return M

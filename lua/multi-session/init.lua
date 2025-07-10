@@ -38,7 +38,10 @@ end
 ---@param session string
 M.load = function(project, session)
 	local path = vim.fs.joinpath(session_dir, project, session)
-	vim.cmd("source " .. path)
+	vim.cmd("source " .. vim.fn.fnameescape(path))
+	if M.config.notify then
+		vim.notify("Loaded session: " .. session, vim.log.levels.INFO)
+	end
 end
 
 M.save = function()

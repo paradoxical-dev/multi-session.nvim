@@ -15,7 +15,7 @@ M.config = {
 		undo = false,
 		watches = false, -- requires dap-utils.nvim
 	},
-	branch_scope = true, -- TODO: implement branch scoped sessions
+	branch_scope = true,
 	picker = {
 		default = "snacks", -- vim|snacks
 		vim = {
@@ -25,7 +25,7 @@ M.config = {
 		snacks = {
 			-- can be any snacks preset layout or custom layout table
 			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-layouts
-			layout = "vertical",
+			layout = "default",
 			project_icon = "",
 			session_icon = "󰑏",
 			hl = {
@@ -50,11 +50,7 @@ M.select = function(opts)
 		return
 	end
 
-	if M.config.branch_scope and utils.is_repo(vim.fn.getcwd()) then
-		pickers[default_picker]("projects", nil, picker_options, { repo = true })
-	else
-		pickers[default_picker]("projects", nil, picker_options)
-	end
+	pickers[default_picker]("projects", nil, picker_options)
 end
 
 ---@param opts table
@@ -62,7 +58,7 @@ end
 ---@param session string
 ---@param branch? string
 M.load = function(opts, project, session, branch)
-	if opts and opts.latest == true then
+	if opts and opts.latest then
 		local s = state.load()
 		if s then
 			local path
@@ -71,8 +67,10 @@ M.load = function(opts, project, session, branch)
 			else
 				path = vim.fs.joinpath(session_dir, s.project, s.session)
 			end
+
 			utils.load_session(path, M.config.preserve)
 			M.active_session = true
+			state.save(s.project, s.session, s.branch)
 
 			if M.config.notify then
 				vim.notify("Loaded latest session: " .. s.session, vim.log.levels.INFO)
@@ -94,7 +92,11 @@ M.load = function(opts, project, session, branch)
 	utils.load_session(path, M.config.preserve)
 	M.active_session = true
 
-	state.save(project, session)
+	if branch and M.config.branch_scope then
+		state.save(project, session, branch)
+	else
+		state.save(project, session)
+	end
 
 	if M.config.notify then
 		vim.notify("Loaded session: " .. session, vim.log.levels.INFO)
@@ -165,12 +167,13 @@ M.delete = function()
 	vim.cmd("silent !rm " .. session_dir .. "/session.vim")
 end
 
-function M.setup(opts)
+M.setup = function(opts)
 	if uv.fs_stat(session_dir) then
 		vim.fn.mkdir(session_dir, "p")
 	end
 	state.file_check()
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+	pickers.branch_scope = M.config.branch_scope
 end
 
 return M

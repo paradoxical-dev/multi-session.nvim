@@ -39,7 +39,6 @@ M.load = function()
 	if f then
 		local data = f:read("*a")
 		f:close()
-		-- print(vim.inspect(vim.fn.json_decode(data)))
 		return vim.fn.json_decode(data)
 	end
 end

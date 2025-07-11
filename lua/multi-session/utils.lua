@@ -141,7 +141,6 @@ M.get_head = function(dir, branch)
 	local result = handle:read("*l")
 	handle:close()
 
-	-- print(result)
 	if result and result:match("^%x+$") then
 		return result
 	end

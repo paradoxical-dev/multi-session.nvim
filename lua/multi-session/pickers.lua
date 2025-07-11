@@ -1,6 +1,6 @@
 local M = {}
+M.branch_scope = false
 local utils = require("multi-session.utils")
-
 local uv = vim.uv or vim.loop
 
 ---@param type string
@@ -59,7 +59,6 @@ M.vim = function(type, project, opts, git)
 				if project:sub(-#s) == s then
 					project = project:sub(1, -#s - 1)
 				end
-				print(project)
 				require("multi-session").load(nil, project, choice, git.branch)
 			end
 		end)
@@ -97,9 +96,6 @@ M.snacks = function(type, project, opts, git)
 		else
 			local repo_path = project:gsub("%%", "/")
 			commit = utils.get_head(repo_path, v)
-			-- if commit then
-			-- 	commit = commit:sub(1, 7)
-			-- end
 		end
 		table.insert(items, { text = v, file = path, commit = commit })
 	end
@@ -125,8 +121,12 @@ M.snacks = function(type, project, opts, git)
 		confirm = function(picker, item)
 			picker:close()
 			if type == "projects" then
-				if git and git.repo then
-					opts.preview = "git_log"
+				local path = item.text:gsub("%%", "/")
+				if M.branch_scope and utils.is_repo(path) then
+					git = { repo = true }
+					opts.preview = function(ctx)
+						M.git_preview(path, ctx)
+					end
 					M.snacks("branches", item.text, opts, git)
 				else
 					opts.preview = "file"
@@ -149,8 +149,51 @@ M.snacks = function(type, project, opts, git)
 				if project:sub(-#s) == s then
 					project = project:sub(1, -#s - 1)
 				end
-				print(project)
 				require("multi-session").load(nil, project, item.text, git.branch)
+			end
+		end,
+	})
+end
+
+-- rework of the builtin git_log preview for snacks picker
+-- allows to show logs from any repo regaurdless of cwd
+---@param path string
+---@param ctx table
+M.git_preview = function(path, ctx)
+	local ns = vim.api.nvim_create_namespace("snacks.picker.preview")
+	local cmd = {
+		"git",
+		"-C",
+		path,
+		-- "delta." .. vim.o.background .. "=true",
+		"--no-pager",
+		"log",
+		"--pretty=format:%h %s (%ch)",
+		"--abbrev-commit",
+		"--decorate",
+		"--date=short",
+		"--color=never",
+		"--no-show-signature",
+		"--no-patch",
+		ctx.item.commit,
+	}
+	local row = 0
+	require("snacks.picker.preview").cmd(cmd, ctx, {
+		ft = "git",
+		add = function(text)
+			local commit, msg, date = text:match("^(%S+) (.*) %((.*)%)$")
+			if commit then
+				row = row + 1
+				local hl = require("snacks.picker.format").git_log({
+					idx = 1,
+					score = 0,
+					text = "",
+					commit = commit,
+					msg = msg,
+					date = date,
+				}, ctx.picker)
+				vim.api.nvim_buf_set_lines(ctx.buf, row - 1, row, false, { text })
+				require("snacks.picker.util.highlight").set(ctx.buf, ns, row, hl)
 			end
 		end,
 	})

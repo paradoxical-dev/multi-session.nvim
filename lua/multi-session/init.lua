@@ -6,10 +6,10 @@ local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
 -- TODO: Add rename/remove session
--- TODO: Add auto checkout for branch_scope
 
 M.config = {
-	auto_save = true, -- overwrite current session on exit
+	-- overwrite current session on exit
+	auto_save = true,
 	notify = true,
 	-- extra aspects of the user session to preserve
 	preserve = {
@@ -19,8 +19,8 @@ M.config = {
 		watches = false, -- requires dap-utils.nvim
 	},
 	branch_scope = true, -- store per branch sessions for git repos
-	-- adds venv to vim.env,PATH and restarts lsp
-	restore_venv = { -- TODO: implement
+	-- detects and adds venv to vim.env,PATH before loading session
+	restore_venv = {
 		enabled = true,
 		patterns = { "venv", ".venv" }, -- patterns to match against for venv
 	},
@@ -167,9 +167,12 @@ M.setup = function(opts)
 		vim.fn.mkdir(session_dir, "p")
 	end
 	state.file_check()
+
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+
 	pickers.branch_scope = M.config.branch_scope
 	utils.branch_scope = M.config.branch_scope
+	utils.restore_venv = M.config.restore_venv
 end
 
 return M

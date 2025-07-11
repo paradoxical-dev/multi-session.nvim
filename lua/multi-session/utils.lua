@@ -3,6 +3,7 @@ local M = {}
 local uv = vim.uv or vim.loop
 M.session_dir = vim.fn.stdpath("state") .. "/multi-session"
 M.branch_scope = false
+M.restore_venv = { enabled = false, patterns = {} }
 
 -- SESSION --
 
@@ -80,6 +81,10 @@ M.load_session = function(session_path, project, extras, branch)
 
 	if branch and M.branch_scope then
 		M.switch_branch(project, branch)
+	end
+
+	if M.restore_venv.enabled then
+		M.load_venv(project)
 	end
 
 	vim.cmd("source " .. session_file)
@@ -170,6 +175,33 @@ M.get_head = function(dir, branch)
 		return result
 	end
 	return nil
+end
+
+-- VENV --
+
+---@param project string
+---@return string|false
+M.has_venv = function(project)
+	local project_path = project:gsub("%%", "/")
+	local patterns = M.restore_venv.patterns
+
+	for _, pattern in ipairs(patterns) do
+		local path = vim.fs.joinpath(project_path, pattern)
+		if uv.fs_stat(path) then
+			return path
+		end
+	end
+	return false
+end
+
+---@param project string
+M.load_venv = function(project)
+	local venv = M.has_venv(project)
+	if not venv then
+		return
+	end
+	vim.env.VIRTUAL_ENV = venv
+	vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
 end
 
 return M

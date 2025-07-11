@@ -45,7 +45,15 @@ M.select = function(opts)
 	local picker_options = M.config.picker[default_picker]
 
 	if opts and opts.cwd == true then
-		local project = vim.fn.getcwd():gsub("[\\/:]+", "%%")
+		local cwd = vim.fn.getcwd()
+		local project = cwd:gsub("[\\/:]+", "%%")
+		if M.config.branch_scope and utils.is_repo(cwd) then
+			picker_options.preview = function(ctx)
+				pickers.git_preview(cwd, ctx)
+			end
+			pickers[default_picker]("branches", project, picker_options, { repo = true })
+			return
+		end
 		pickers[default_picker]("sessions", project, picker_options)
 		return
 	end
@@ -98,24 +106,21 @@ M.save = function()
 				return
 			end
 
-			local session_path = session_dir .. "/" .. s.project .. "/" .. s.session
+			local session_path = vim.fs.joinpath(session_dir, s.project, s.branch or "", s.session)
 			utils.save_session(session_path, M.config.preserve)
 
 			if M.config.notify then
 				vim.notify("Saved session as: " .. s.session, vim.log.levels.INFO)
 			end
-
 			return
 		end
 	end
 
 	local cwd = vim.fn.getcwd()
 	local sanitized_dir = vim.fn.getcwd():gsub("[\\/:]+", "%%")
-	local project_dir = session_dir .. "/" .. sanitized_dir
-	local exists = uv.fs_stat(project_dir)
-	local branch
+	local project_dir = vim.fs.joinpath(session_dir, sanitized_dir)
 
-	if not exists then
+	if not uv.fs_stat(project_dir) then
 		vim.fn.mkdir(project_dir, "p")
 	end
 
@@ -125,22 +130,12 @@ M.save = function()
 			return
 		end
 
-		local session_path = ""
-		if utils.is_repo(cwd) and M.config.branch_scope then
-			branch = utils.current_branch(cwd)
-			session_path = project_dir .. "/" .. branch .. "/" .. name
-		else
-			session_path = project_dir .. "/" .. name
-		end
+		local branch = (utils.is_repo(cwd) and M.config.branch_scope) and utils.current_branch(cwd) or nil
+		local session_path = vim.fs.joinpath(project_dir, branch or "", name)
 		vim.fn.mkdir(session_path, "p")
 
 		utils.save_session(session_path, M.config.preserve)
-
-		if M.config.branch_scope and branch then
-			state.save(sanitized_dir, name, branch)
-		else
-			state.save(sanitized_dir, name)
-		end
+		state.save(sanitized_dir, name, branch)
 
 		if M.config.notify then
 			vim.notify("Saved session as: " .. name, vim.log.levels.INFO)

@@ -58,25 +58,13 @@ end
 ---@param session string
 ---@param branch? string
 M.load = function(opts, project, session, branch)
+	local s
 	if opts and opts.latest then
-		local s = state.load()
-		if s then
-			local path
-			if s.branch and M.config.branch_scope then
-				path = vim.fs.joinpath(session_dir, s.project, s.branch, s.session)
-			else
-				path = vim.fs.joinpath(session_dir, s.project, s.session)
-			end
-
-			utils.load_session(path, M.config.preserve)
-			M.active_session = true
-			state.save(s.project, s.session, s.branch)
-
-			if M.config.notify then
-				vim.notify("Loaded latest session: " .. s.session, vim.log.levels.INFO)
-			end
+		s = state.load()
+		if not s then
+			return
 		end
-		return
+		project, session, branch = s.project, s.session, s.branch
 	end
 
 	if not (project and session) or session == "" then
@@ -89,14 +77,11 @@ M.load = function(opts, project, session, branch)
 	else
 		path = vim.fs.joinpath(session_dir, project, session)
 	end
+
 	utils.load_session(path, M.config.preserve)
 	M.active_session = true
 
-	if branch and M.config.branch_scope then
-		state.save(project, session, branch)
-	else
-		state.save(project, session)
-	end
+	state.save(project, session, (branch and M.config.branch_scope) and branch or nil)
 
 	if M.config.notify then
 		vim.notify("Loaded session: " .. session, vim.log.levels.INFO)

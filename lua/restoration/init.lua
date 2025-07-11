@@ -1,7 +1,7 @@
 local M = {}
-local pickers = require("multi-session.pickers")
-local state = require("multi-session.state")
-local utils = require("multi-session.utils")
+local pickers = require("restoration.pickers")
+local state = require("restoration.state")
+local utils = require("restoration.utils")
 local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
@@ -25,7 +25,7 @@ M.config = {
 		patterns = { "venv", ".venv" }, -- patterns to match against for venv
 	},
 	picker = {
-		default = "snacks", -- vim|snacks
+		default = "vim", -- vim|snacks
 		vim = {
 			icons = {
 				project = "",

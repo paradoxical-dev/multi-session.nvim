@@ -1,6 +1,6 @@
 local M = {}
 M.branch_scope = false
-local utils = require("multi-session.utils")
+local utils = require("restoration.utils")
 local uv = vim.uv or vim.loop
 
 ---@param type string
@@ -20,7 +20,7 @@ M.vim = function(type, project, opts, git)
 				return
 			end
 			if opts.delete_project then
-				require("multi-session").delete_project(choice)
+				require("restoration").delete_project(choice)
 				return
 			end
 			local path = choice:gsub("%%", "/")
@@ -56,7 +56,7 @@ M.vim = function(type, project, opts, git)
 				return
 			end
 			if opts.delete then
-				require("multi-session").delete(project, choice, git and git.branch or nil)
+				require("restoration").delete(project, choice, git and git.branch or nil)
 				return
 			end
 			if opts.rename then
@@ -66,11 +66,11 @@ M.vim = function(type, project, opts, git)
 						project = project:sub(1, -#s - 1)
 					end
 				end
-				require("multi-session").rename(project, choice, git and git.branch or nil)
+				require("restoration").rename(project, choice, git and git.branch or nil)
 				return
 			end
 			if not git then
-				require("multi-session").load(nil, project, choice)
+				require("restoration").load(nil, project, choice)
 			else
 				-- branch needs to be removed from the project name
 				-- it was added in the branch picker and will be added back on
@@ -79,7 +79,7 @@ M.vim = function(type, project, opts, git)
 				if project:sub(-#s) == s then
 					project = project:sub(1, -#s - 1)
 				end
-				require("multi-session").load(nil, project, choice, git.branch)
+				require("restoration").load(nil, project, choice, git.branch)
 			end
 		end)
 	else
@@ -144,7 +144,7 @@ M.snacks = function(type, project, opts, git)
 			picker:close()
 			if type == "projects" then
 				if opts.delete_project then
-					require("multi-session").delete_project(item.text)
+					require("restoration").delete_project(item.text)
 					return
 				end
 				local path = item.text:gsub("%%", "/")
@@ -165,7 +165,7 @@ M.snacks = function(type, project, opts, git)
 				M.snacks("sessions", project, opts, git)
 			else
 				if opts.delete then
-					require("multi-session").delete(project, item.text, git and git.branch or nil)
+					require("restoration").delete(project, item.text, git and git.branch or nil)
 					return
 				end
 				if opts.rename then
@@ -175,11 +175,11 @@ M.snacks = function(type, project, opts, git)
 							project = project:sub(1, -#s - 1)
 						end
 					end
-					require("multi-session").rename(project, item.text, git and git.branch or nil)
+					require("restoration").rename(project, item.text, git and git.branch or nil)
 					return
 				end
 				if not git then
-					require("multi-session").load(nil, project, item.text)
+					require("restoration").load(nil, project, item.text)
 					return
 				end
 				-- branch needs to be removed from the project name
@@ -189,7 +189,7 @@ M.snacks = function(type, project, opts, git)
 				if project:sub(-#s) == s then
 					project = project:sub(1, -#s - 1)
 				end
-				require("multi-session").load(nil, project, item.text, git.branch)
+				require("restoration").load(nil, project, item.text, git.branch)
 			end
 		end,
 	})

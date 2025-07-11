@@ -1,6 +1,6 @@
 local M = {}
 
-local session_dir = require("multi-session.utils").session_dir
+local session_dir = require("restoration.utils").session_dir
 local state_file = session_dir .. "/last-session.json"
 
 local uv = vim.uv or vim.loop

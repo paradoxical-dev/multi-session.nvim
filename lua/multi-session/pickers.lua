@@ -19,6 +19,10 @@ M.vim = function(type, project, opts, git)
 			if not choice or choice == "" then
 				return
 			end
+			if opts.delete_project then
+				require("multi-session").delete_project(choice)
+				return
+			end
 			local path = choice:gsub("%%", "/")
 			if M.branch_scope and utils.is_repo(path) then
 				git = { repo = true }
@@ -49,6 +53,10 @@ M.vim = function(type, project, opts, git)
 			end,
 		}, function(choice)
 			if not choice or choice == "" then
+				return
+			end
+			if opts.delete then
+				require("multi-session").delete(project, choice, git and git.branch or nil)
 				return
 			end
 			if opts.rename then
@@ -135,6 +143,10 @@ M.snacks = function(type, project, opts, git)
 		confirm = function(picker, item)
 			picker:close()
 			if type == "projects" then
+				if opts.delete_project then
+					require("multi-session").delete_project(item.text)
+					return
+				end
 				local path = item.text:gsub("%%", "/")
 				if M.branch_scope and utils.is_repo(path) then
 					git = { repo = true }
@@ -152,6 +164,10 @@ M.snacks = function(type, project, opts, git)
 				opts.preview = "file"
 				M.snacks("sessions", project, opts, git)
 			else
+				if opts.delete then
+					require("multi-session").delete(project, item.text, git and git.branch or nil)
+					return
+				end
 				if opts.rename then
 					if git and git.branch then
 						local s = "/" .. git.branch

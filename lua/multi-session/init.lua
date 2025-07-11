@@ -25,7 +25,7 @@ M.config = {
 		patterns = { "venv", ".venv" }, -- patterns to match against for venv
 	},
 	picker = {
-		default = "vim", -- vim|snacks
+		default = "snacks", -- vim|snacks
 		vim = {
 			icons = {
 				project = "",
@@ -73,8 +73,11 @@ M.select = function(opts)
 		return
 	end
 
-	if opts and opts.rename then
-		picker_options.rename = true
+	if opts then
+		picker_options.rename = opts.rename
+		picker_options.delete = opts.delete
+		picker_options.delete_project = opts.delete_project
+		print(vim.inspect(picker_options))
 		pickers[default_picker]("projects", nil, picker_options)
 		return
 	end
@@ -164,8 +167,85 @@ M.save = function()
 	end)
 end
 
-M.delete = function()
-	vim.cmd("silent !rm " .. session_dir .. "/session.vim")
+---@param project string
+---@param session string
+---@param branch? string
+M.delete = function(project, session, branch)
+	local overwrite
+	if (not project or not session or session == "") and M.active_session then
+		local use_current = vim.fn.confirm("Delete current session?", "&Yes\n&No", 2)
+		if use_current == 1 then
+			overwrite = true
+			local s = state.load()
+			if not s then
+				vim.notify("Unable to load session details", vim.log.levels.ERROR)
+				return
+			end
+			project, session, branch = s.project, s.session, s.branch
+		else
+			M.select({ delete = true })
+			return
+		end
+	elseif not (project and session) or session == "" then
+		M.select({ delete = true })
+		return
+	end
+
+	local path = vim.fs.joinpath(session_dir, project, branch or "", session)
+	local ok = vim.fn.delete(path, "rf")
+	if ok ~= 0 then
+		vim.notify("Unable to delete session: " .. session, vim.log.levels.ERROR)
+		return
+	end
+
+	if overwrite then
+		state.save("", "", nil)
+		M.active_session = false
+	end
+
+	if M.config.notify then
+		vim.notify("Deleted session: " .. session, vim.log.levels.INFO)
+	end
+end
+
+---@param project string
+M.delete_project = function(project)
+	local overwrite
+	if (not project or project == "") and M.active_session then
+		local use_current = vim.fn.confirm("Delete current project?", "&Yes\n&No", 2)
+		if use_current == 1 then
+			overwrite = true
+			local s = state.load()
+			if not s then
+				vim.notify("Unable to load session details", vim.log.levels.ERROR)
+				return
+			end
+			project = s.project
+		else
+			M.select({ delete_project = true })
+			return
+		end
+	elseif not project or project == "" then
+		M.select({ delete_project = true })
+		return
+	end
+
+	local path = vim.fs.joinpath(session_dir, project)
+	local ok = vim.fn.delete(path, "rf")
+	if ok ~= 0 then
+		vim.notify("Unable to delete project: " .. project, vim.log.levels.ERROR)
+		return
+	end
+
+	if overwrite then
+		state.save("", "", nil)
+		M.active_session = false
+	end
+
+	if M.config.notify then
+		project = project:gsub("%%", "/")
+		vim.notify("Deleted project: " .. project, vim.log.levels.INFO)
+	end
 end
 
 ---@param project string
@@ -173,7 +253,7 @@ end
 ---@param branch? string
 M.rename = function(project, session, branch)
 	local overwrite
-	if not (project and session) or session == "" then
+	if (not project or not session or session == "") and M.active_session then
 		local use_current = vim.fn.confirm("Rename current session?", "&Yes\n&No", 2)
 		if use_current == 1 then
 			overwrite = true
@@ -187,6 +267,9 @@ M.rename = function(project, session, branch)
 			M.select({ rename = true })
 			return
 		end
+	elseif not (project and session) or session == "" then
+		M.select({ rename = true })
+		return
 	end
 
 	vim.ui.input({ prompt = "New Name" }, function(name)

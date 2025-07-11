@@ -6,32 +6,47 @@ local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
 -- TODO: Add rename/remove session
+-- TODO: Add auto checkout for branch_scope
 
 M.config = {
-	notify = true, -- show notifications after performing actions
-	preserve = { -- extra aspects of the user session to preserve
+	auto_save = true, -- overwrite current session on exit
+	notify = true,
+	-- extra aspects of the user session to preserve
+	preserve = {
 		breakpoints = false, -- requires dap-utils.nvim
 		qflist = false, -- requires quickfix.nvim
 		undo = false,
 		watches = false, -- requires dap-utils.nvim
 	},
-	branch_scope = true,
+	branch_scope = true, -- store per branch sessions for git repos
+	-- adds venv to vim.env,PATH and restarts lsp
+	restore_venv = { -- TODO: implement
+		enabled = true,
+		patterns = { "venv", ".venv" }, -- patterns to match against for venv
+	},
 	picker = {
-		default = "snacks", -- vim|snacks
+		default = "vim", -- vim|snacks
 		vim = {
-			project_icon = "",
-			session_icon = "󰑏",
+			icons = {
+				project = "",
+				session = "󰑏",
+				branch = "",
+			},
 		},
 		snacks = {
 			-- can be any snacks preset layout or custom layout table
 			-- see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#%EF%B8%8F-layouts
 			layout = "default",
-			project_icon = "",
-			session_icon = "󰑏",
+			icons = {
+				project = "",
+				session = "󰑏",
+				branch = "",
+			},
 			hl = {
 				base_dir = "SnacksPickerDir",
 				project_dir = "Directory",
 				session = "SnacksPickerBold",
+				branch = "SnacksPickerGitBranch",
 			},
 		},
 	},
@@ -86,7 +101,7 @@ M.load = function(opts, project, session, branch)
 		path = vim.fs.joinpath(session_dir, project, session)
 	end
 
-	utils.load_session(path, M.config.preserve)
+	utils.load_session(path, project, M.config.preserve, branch or nil)
 	M.active_session = true
 
 	state.save(project, session, (branch and M.config.branch_scope) and branch or nil)
@@ -154,6 +169,7 @@ M.setup = function(opts)
 	state.file_check()
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 	pickers.branch_scope = M.config.branch_scope
+	utils.branch_scope = M.config.branch_scope
 end
 
 return M

@@ -2,6 +2,9 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 M.session_dir = vim.fn.stdpath("state") .. "/multi-session"
+M.branch_scope = false
+
+-- SESSION --
 
 ---@param project string
 ---@return string[]
@@ -68,10 +71,16 @@ M.save_session = function(session_path, extras)
 end
 
 ---@param session_path string
+---@param project string
 ---@param extras table
-M.load_session = function(session_path, extras)
+---@param branch? string
+M.load_session = function(session_path, project, extras, branch)
 	local name = vim.fn.fnamemodify(session_path, ":t")
 	local session_file = vim.fn.fnameescape(session_path .. "/" .. name .. ".vim")
+
+	if branch and M.branch_scope then
+		M.switch_branch(project, branch)
+	end
 
 	vim.cmd("source " .. session_file)
 
@@ -90,6 +99,8 @@ M.load_session = function(session_path, extras)
 		end
 	end
 end
+
+-- GIT --
 
 ---@param dir string
 M.is_repo = function(dir)
@@ -113,6 +124,7 @@ M.current_branch = function(dir)
 	return nil
 end
 
+---@param project string
 M.branch_list = function(project)
 	local branches = {}
 	local fd = uv.fs_scandir(M.session_dir .. "/" .. project)
@@ -131,6 +143,19 @@ M.branch_list = function(project)
 	return branches
 end
 
+---@param project string
+---@param branch string
+M.switch_branch = function(project, branch)
+	local repo = project:gsub("%%", "/")
+	vim.cmd("cd " .. repo)
+	local current_branch = M.current_branch(repo)
+	if branch ~= current_branch then
+		vim.cmd("silent !git switch " .. branch)
+	end
+end
+
+---@param dir string
+---@param branch string
 M.get_head = function(dir, branch)
 	local cmd = "git -C " .. vim.fn.shellescape(dir) .. " rev-parse " .. vim.fn.shellescape(branch)
 	local handle = io.popen(cmd)

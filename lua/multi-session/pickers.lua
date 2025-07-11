@@ -13,13 +13,15 @@ M.vim = function(type, project, opts, git)
 			prompt = "Select project",
 			format_item = function(item)
 				local path = item:gsub("%%", "/")
-				return opts.project_icon .. " " .. path
+				return opts.icons.project .. " " .. path
 			end,
 		}, function(choice)
 			if not choice or choice == "" then
 				return
 			end
-			if git and git.repo then
+			local path = choice:gsub("%%", "/")
+			if M.branch_scope and utils.is_repo(path) then
+				git = { repo = true }
 				M.vim("branches", choice, opts, git)
 			else
 				M.vim("sessions", choice, opts)
@@ -29,7 +31,7 @@ M.vim = function(type, project, opts, git)
 		vim.ui.select(utils.branch_list(project), {
 			prompt = "Select branch",
 			format_item = function(item)
-				return opts.session_icon .. " " .. item
+				return opts.icons.session .. " " .. item
 			end,
 		}, function(choice)
 			if not choice or choice == "" then
@@ -43,7 +45,7 @@ M.vim = function(type, project, opts, git)
 		vim.ui.select(utils.session_list(project), {
 			prompt = "Select session",
 			format_item = function(item)
-				return opts.session_icon .. " " .. item
+				return opts.icons.session .. " " .. item
 			end,
 		}, function(choice)
 			if not choice or choice == "" then
@@ -108,12 +110,14 @@ M.snacks = function(type, project, opts, git)
 				local base = vim.fn.fnamemodify(path, ":t")
 				local dir = vim.fn.fnamemodify(path, ":h"):gsub(uv.os_getenv("HOME"), "~")
 				return {
-					{ opts.project_icon .. " " .. dir .. "/", opts.hl.base_dir },
+					{ opts.icons.project .. " " .. dir .. "/", opts.hl.base_dir },
 					{ base, opts.hl.project_dir },
 				}
+			elseif type == "branches" then
+				return { { opts.icons.branch .. " " .. item.text, opts.hl.branch } }
 			else
 				local name = item.text:gsub("%.vim", "")
-				return { { opts.session_icon .. " " .. name, opts.hl.session } }
+				return { { opts.icons.session .. " " .. name, opts.hl.session } }
 			end
 		end,
 		layout = opts.layout,

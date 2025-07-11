@@ -73,6 +73,12 @@ M.select = function(opts)
 		return
 	end
 
+	if opts and opts.rename then
+		picker_options.rename = true
+		pickers[default_picker]("projects", nil, picker_options)
+		return
+	end
+
 	pickers[default_picker]("projects", nil, picker_options)
 end
 
@@ -160,6 +166,59 @@ end
 
 M.delete = function()
 	vim.cmd("silent !rm " .. session_dir .. "/session.vim")
+end
+
+---@param project string
+---@param session string
+---@param branch? string
+M.rename = function(project, session, branch)
+	local overwrite
+	if not (project and session) or session == "" then
+		local use_current = vim.fn.confirm("Rename current session?", "&Yes\n&No", 2)
+		if use_current == 1 then
+			overwrite = true
+			local s = state.load()
+			if not s then
+				vim.notify("Unable to load session details", vim.log.levels.ERROR)
+				return
+			end
+			project, session, branch = s.project, s.session, s.branch
+		else
+			M.select({ rename = true })
+			return
+		end
+	end
+
+	vim.ui.input({ prompt = "New Name" }, function(name)
+		if not name or name == "" then
+			vim.notify("Session rename cancelled", vim.log.levels.WARN)
+			return
+		end
+
+		local old_dir = vim.fs.joinpath(session_dir, project, branch or "", session)
+		local new_dir = vim.fs.joinpath(session_dir, project, branch or "", name)
+
+		local ok = vim.fn.rename(old_dir, new_dir)
+		if ok ~= 0 then
+			vim.notify("Unable to rename session folder: " .. old_dir, vim.log.levels.ERROR)
+			return
+		end
+
+		local old_file = vim.fs.joinpath(new_dir, session .. ".vim")
+		local new_file = vim.fs.joinpath(new_dir, name .. ".vim")
+
+		if vim.fn.filereadable(old_file) == 1 then
+			vim.fn.rename(old_file, new_file)
+		end
+
+		if overwrite then
+			state.save(project, name, branch)
+		end
+
+		if M.config.notify then
+			vim.notify("Renamed session " .. session .. " to: " .. name, vim.log.levels.INFO)
+		end
+	end)
 end
 
 M.setup = function(opts)

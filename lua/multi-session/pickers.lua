@@ -51,6 +51,16 @@ M.vim = function(type, project, opts, git)
 			if not choice or choice == "" then
 				return
 			end
+			if opts.rename then
+				if git and git.branch then
+					local s = "/" .. git.branch
+					if project:sub(-#s) == s then
+						project = project:sub(1, -#s - 1)
+					end
+				end
+				require("multi-session").rename(project, choice, git and git.branch or nil)
+				return
+			end
 			if not git then
 				require("multi-session").load(nil, project, choice)
 			else
@@ -142,6 +152,16 @@ M.snacks = function(type, project, opts, git)
 				opts.preview = "file"
 				M.snacks("sessions", project, opts, git)
 			else
+				if opts.rename then
+					if git and git.branch then
+						local s = "/" .. git.branch
+						if project:sub(-#s) == s then
+							project = project:sub(1, -#s - 1)
+						end
+					end
+					require("multi-session").rename(project, item.text, git and git.branch or nil)
+					return
+				end
 				if not git then
 					require("multi-session").load(nil, project, item.text)
 					return
@@ -160,7 +180,7 @@ M.snacks = function(type, project, opts, git)
 end
 
 -- rework of the builtin git_log preview for snacks picker
--- allows to show logs from any repo regaurdless of cwd
+-- allows showing logs from any repo regaurdless of cwd
 ---@param path string
 ---@param ctx table
 M.git_preview = function(path, ctx)
@@ -169,7 +189,6 @@ M.git_preview = function(path, ctx)
 		"git",
 		"-C",
 		path,
-		-- "delta." .. vim.o.background .. "=true",
 		"--no-pager",
 		"log",
 		"--pretty=format:%h %s (%ch)",

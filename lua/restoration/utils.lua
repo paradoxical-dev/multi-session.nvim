@@ -1,7 +1,7 @@
 local M = {}
 
 local uv = vim.uv or vim.loop
-M.session_dir = vim.fn.stdpath("state") .. "/multi-session"
+M.session_dir = vim.fn.stdpath("state") .. "/restoration"
 M.branch_scope = false
 M.restore_venv = { enabled = false, patterns = {} }
 

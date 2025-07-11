@@ -5,8 +5,6 @@ local utils = require("restoration.utils")
 local session_dir = utils.session_dir
 local uv = vim.uv or vim.loop
 
--- TODO: Add rename/remove session
-
 M.config = {
 	-- overwrite current session on exit
 	auto_save = true,
@@ -120,8 +118,9 @@ M.load = function(opts, project, session, branch)
 	end
 end
 
-M.save = function()
-	if M.active_session then
+---@param auto_save? boolean
+M.save = function(auto_save)
+	if M.active_session and not auto_save then
 		local overwrite = vim.fn.confirm("Overwrite your current session?", "&Yes\n&No", 2)
 		if overwrite == 1 then
 			local s = state.load()
@@ -138,6 +137,17 @@ M.save = function()
 			end
 			return
 		end
+	elseif auto_save and M.active_session then
+		local s = state.load()
+		if not s then
+			vim.notify("Unable to load session details", vim.log.levels.ERROR)
+			return
+		end
+
+		local session_path = vim.fs.joinpath(session_dir, s.project, s.branch or "", s.session)
+		utils.save_session(session_path, M.config.preserve)
+
+		return
 	end
 
 	local cwd = vim.fn.getcwd()
@@ -315,6 +325,20 @@ M.setup = function(opts)
 	pickers.branch_scope = M.config.branch_scope
 	utils.branch_scope = M.config.branch_scope
 	utils.restore_venv = M.config.restore_venv
+
+	if M.config.auto_save then
+		vim.api.nvim_create_autocmd("VimLeavePre", {
+			callback = function()
+				if M.active_session then
+					local s = state.load()
+					if not s then
+						return
+					end
+					M.save(true)
+				end
+			end,
+		})
+	end
 end
 
 return M

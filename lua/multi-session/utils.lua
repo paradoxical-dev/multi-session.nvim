@@ -202,6 +202,32 @@ M.load_venv = function(project)
 	end
 	vim.env.VIRTUAL_ENV = venv
 	vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
+	if package.loaded["lspconfig"] then
+		vim.cmd("LspRestart")
+	else
+		M.restart_lsp()
+	end
+end
+
+-- An attempt to restart LSP after loading a session
+M.restart_lsp = function()
+	local clients = vim.lsp.get_clients()
+	local attached = {}
+
+	for _, client in pairs(clients) do
+		for buf, _ in ipairs(client.attached_buffers or {}) do
+			table.insert(attached, buf)
+		end
+		client:stop()
+	end
+
+	vim.schedule(function()
+		for _, buf in ipairs(attached) do
+			if vim.api.nvim_buf_is_loaded(buf) then
+				vim.api.nvim_exec_autocmds("BufReadPost", { buffer = buf })
+			end
+		end
+	end)
 end
 
 return M

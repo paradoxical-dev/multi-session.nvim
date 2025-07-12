@@ -1,6 +1,7 @@
 # restoration.nvim
 
 **Smart, scoped session management for Neovim.**
+
 Restore your editor exactly as you left it
 
 # ✨ Features
@@ -161,6 +162,10 @@ require("restoration").delete_project()
 vim.keymap.set("n", "<leader>ss", function()
     require("restoration").select()
 end, { desc = "Select Session" })
+
+vim.keymap.set("n", "<leader>sc", function()
+    require("restoration").select({ cwd = true })
+end, { desc = "Select Session in Current Dir" })
 
 vim.keymap.set("n", "<leader>sl", function()
     require("restoration").load({ latest = true })

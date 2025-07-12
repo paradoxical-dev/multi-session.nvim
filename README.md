@@ -154,7 +154,9 @@ require("restoration").delete_project()
 ```
 
 > [!TIP]
-> All sessions are stored under the neovim state path `vim.fn.stdpath("state" .. "/restoration")` (typically `~/.local/state/nvim/restoration`)
+> All sessions are stored the neovim state path `vim.fn.stdpath("state")` under the restoration directory
+>
+> Session files will be stored within in the following format: `<project path>/<session name>/<session name>.vim`
 
 ## ️⌨️ Example Mappings
 
